@@ -4,7 +4,7 @@ const { Upload } = require('@aws-sdk/lib-storage');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
 require('dotenv').config();
-const logger = require('./logger'); // Import the logger
+
 const multer = require('multer');
 
 // Create an Express app
@@ -35,9 +35,7 @@ async function connectToDb() {
     await client.connect();
     db = client.db('receiptsApp');
     receiptsCollection = db.collection('receipts');
-    logger.info('Connected to MongoDB');
   } catch (error) {
-    logger.error('Error connecting to MongoDB:', error);
   }
 }
 
@@ -112,10 +110,9 @@ app.post('/api/upload', upload.single('receipt'), async (req, res) => {
 app.get('/api/receipts', async (req, res) => {
   try {
     const receipts = await receiptsCollection.find().toArray();
-    logger.info('Fetched receipts:', receipts);
     res.json(receipts);
   } catch (error) {
-    logger.error('Error fetching receipts:', error);
+  
     res.status(500).json({ error: 'Failed to fetch receipts' });
   }
 });
@@ -123,6 +120,6 @@ app.get('/api/receipts', async (req, res) => {
 // Start the server
 connectToDb().then(() => {
   app.listen(3001, () => {
-    logger.info('Backend server is running on port 3001');
+    
   });
 });
