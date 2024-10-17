@@ -4,7 +4,7 @@ const { Upload } = require('@aws-sdk/lib-storage');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
 require('dotenv').config();
-
+const logger = require('./logger'); // Import the logger
 const multer = require('multer');
 
 // Create an Express app
@@ -35,17 +35,21 @@ async function connectToDb() {
     await client.connect();
     db = client.db('receiptsApp');
     receiptsCollection = db.collection('receipts');
+    logger.info('Connected to MongoDB');
   } catch (error) {
+    logger.error('Error connecting to MongoDB:', error);
   }
 }
 
 // Route to handle file and data upload
 app.post('/api/upload', upload.single('receipt'), async (req, res) => {
-  const { description, store, priceWithGST, date, purpose } = req.body;
+  const { description, store, priceWithGST, date, purpose, person } = req.body;
 
   // Check for uploaded file
   let imageURL;
+  logger.info('AA');
   if (req.file) {
+    logger.info('BBBBB');
     // If file uploaded, use that
     const uploadParams = {
       Bucket: process.env.S3_BUCKET_NAME,
@@ -68,7 +72,7 @@ app.post('/api/upload', upload.single('receipt'), async (req, res) => {
     }
   } else if (req.body.base64Image) {
     // Handle base64 image
-    console.log("aaaaaaaa")
+    logger.info("aaaaaaaa")
     const base64Data = req.body.base64Image.replace(/^data:image\/jpeg;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
     const uploadParams = {
@@ -99,6 +103,7 @@ app.post('/api/upload', upload.single('receipt'), async (req, res) => {
     priceWithGST,
     date: new Date(date),
     purpose,
+    person,
     dateAdded: new Date(),
   };
 
@@ -109,10 +114,11 @@ app.post('/api/upload', upload.single('receipt'), async (req, res) => {
 // Route to get all receipts
 app.get('/api/receipts', async (req, res) => {
   try {
-    const receipts = await receiptsCollection.find().toArray();
+    const receipts = await receiptsCollection.find().sort({ dateAdded: -1 }).toArray();
+    logger.info('Fetched receipts:', receipts);
     res.json(receipts);
   } catch (error) {
-  
+    logger.error('Error fetching receipts:', error);
     res.status(500).json({ error: 'Failed to fetch receipts' });
   }
 });
@@ -120,6 +126,6 @@ app.get('/api/receipts', async (req, res) => {
 // Start the server
 connectToDb().then(() => {
   app.listen(3001, () => {
-    
+    logger.info('Backend server is running on port 3001');
   });
 });
